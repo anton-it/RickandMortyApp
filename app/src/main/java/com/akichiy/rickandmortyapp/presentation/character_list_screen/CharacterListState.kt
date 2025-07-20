@@ -4,6 +4,7 @@ import com.akichiy.rickandmortyapp.domain.model.Character
 data class CharacterListState(
 
     val characters: List<Character> = emptyList(),
+    val filteredCharacters: List<Character>? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
     val message: String? = null,

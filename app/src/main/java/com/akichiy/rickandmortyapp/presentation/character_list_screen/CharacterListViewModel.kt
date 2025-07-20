@@ -8,6 +8,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -24,6 +27,7 @@ class CharacterListViewModel @Inject constructor(
     init {
         loadCharacters()
     }
+
 
     fun loadCharacters(page: Int = state.value.currentPage) {
         if (state.value.isLoadingNextPage || state.value.endReached) return
@@ -49,52 +53,43 @@ class CharacterListViewModel @Inject constructor(
                 }
             }
         }
-        }
+    }
 
-
-////////NO PAGINATION
-//    fun loadCharacters(page: Int = 1) {
-//        viewModelScope.launch {
-//            getCharactersUseCase(page).collect { result ->
-//                result.onSuccess {
-//                    _state.update { listState ->
-//                        listState.copy(
-//                            characters = listState.characters + it,
-//                            isLoading = false
-//                        )
-//                    }
-//                }.onFailure {
-//                    _state.update {
-//                        it.copy(error = it.message ?: "Ошибка")
-//                    }
-//                }
-//            }
-//        }
-//    }
-
-        fun applyFilter(name: String?, status: String?, gender: String?, species: String?) {
-            viewModelScope.launch {
-                _state.update { it.copy(isLoading = true) }
-                filterCharactersUseCase(name, status, gender, species).collect { result ->
-                    result.onSuccess {
-                        _state.update { listState ->
-                            listState.copy(
-                                characters = it,
-                                isLoading = false,
-                                error = null
-                            )
-                        }
-                    }.onFailure {
-                        _state.update {
-                            it.copy(error = it.message ?: "Ошибка")
-                        }
+    fun applyFilter(
+        name: String? = null,
+        status: String? = null,
+        gender: String? = null,
+        species: String? = null
+    ) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            filterCharactersUseCase(name, status, gender, species).collect { result ->
+                result.onSuccess {
+                    _state.update { listState ->
+                        listState.copy(
+                            filteredCharacters = it,
+                            isLoading = false,
+                            error = null
+                        )
+                    }
+                }.onFailure {
+                    _state.update {
+                        it.copy(error = it.message ?: "Ошибка", isLoading = false)
                     }
                 }
             }
         }
-
-        fun refresh() {
-            _state.update { it.copy(characters = emptyList()) }
-            loadCharacters()
-        }
     }
+
+    fun refresh() {
+        _state.update {
+            it.copy(
+                characters = emptyList(),
+                filteredCharacters = null, // Сбросить фильтр
+                currentPage = 1,
+                endReached = false
+            )
+        }
+        loadCharacters()
+    }
+}
